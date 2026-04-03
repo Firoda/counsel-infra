@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e  # stop on error
+set -e
 
 APP_DIR="/opt/easyocr-service"
 SERVICE_FILE="/etc/systemd/system/easyocr.service"
@@ -13,43 +13,47 @@ echo "📦 Installing system dependencies..."
 sudo dnf install -y python3 python3-pip python3-devel \
     gcc gcc-c++ make \
     libXext libXrender libSM \
-    mesa-libGL glib2
+    mesa-libGL glib2 \
+    policycoreutils-python-utils
 
-# 2. Create app directory if not exists
-echo "📁 Creating app directory..."
+# 2. Create app directory
+echo "📁 Setting up application directory..."
 sudo mkdir -p $APP_DIR
 sudo chown -R $USER_NAME:$USER_NAME $APP_DIR
 
-# 3. Copy app files (assumes you run script from project folder)
+# 3. Copy app files (run script from project root)
 echo "📂 Copying app files..."
 cp app.py $APP_DIR/
-cp -r __pycache__ $APP_DIR/ 2>/dev/null || true
 
 cd $APP_DIR
 
-# 4. Create virtualenv if not exists
+# 4. Create virtualenv as opc user (IMPORTANT)
 if [ ! -d "venv" ]; then
     echo "🐍 Creating virtual environment..."
-    python3 -m venv venv
+    sudo -u $USER_NAME python3 -m venv venv
 fi
 
-# 5. Activate venv
-source venv/bin/activate
-
-# 6. Install Python dependencies
+# 5. Install dependencies as opc
 echo "📚 Installing Python dependencies..."
+sudo -u $USER_NAME bash <<EOF
+source venv/bin/activate
 pip install --upgrade pip
+pip install easyocr opencv-python pillow numpy fastapi uvicorn
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+EOF
 
-pip install easyocr opencv-python pillow numpy fastapi uvicorn \
-    torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cpu
+# 6. Ensure correct ownership (critical)
+echo "🔐 Fixing permissions..."
+sudo chown -R $USER_NAME:$USER_NAME $APP_DIR
+sudo chmod -R 755 $APP_DIR
 
-# 7. Fix permissions (important for systemd)
-chmod +x venv/bin/uvicorn || true
+# 7. Fix SELinux context (CRITICAL FIX)
+echo "🛡️ Configuring SELinux context..."
+sudo semanage fcontext -a -t bin_t "$APP_DIR/venv(/.*)?" 2>/dev/null || true
+sudo restorecon -Rv $APP_DIR/venv
 
-# 8. Create/Update systemd service
+# 8. Create systemd service
 echo "⚙️ Configuring systemd service..."
-
 sudo bash -c "cat > $SERVICE_FILE" <<EOL
 [Unit]
 Description=EasyOCR Captcha Service
