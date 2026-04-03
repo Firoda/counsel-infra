@@ -34,3 +34,10 @@ def read_captcha(req: ImageRequest):
     return {
         "text": "".join(result)
     }
+
+# ✅ Health check endpoint
+@app.get("/health")
+def health():
+    return {
+        "status": "ok"
+    }
