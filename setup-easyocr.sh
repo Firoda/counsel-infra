@@ -81,7 +81,7 @@ echo "🔍 Checking service status..."
 sudo systemctl status easyocr --no-pager
 
 echo "🌐 Health check..."
-sleep 2
+sleep 5
 curl -s http://127.0.0.1:8000/health || echo "Health check failed"
 
 echo "✅ Setup complete!"
