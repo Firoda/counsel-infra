@@ -27,7 +27,7 @@ def read_captcha(req: ImageRequest):
 
     result = reader.readtext(
         image,
-        allowlist='0123456789',
+        allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
         detail=0
     )
 
