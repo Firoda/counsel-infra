@@ -38,8 +38,7 @@ echo "📚 Installing Python dependencies..."
 sudo -u $USER_NAME bash <<EOF
 source venv/bin/activate
 pip install --upgrade pip
-pip install transformers opencv-python pillow numpy fastapi uvicorn
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install ddddocr opencv-python numpy fastapi uvicorn
 EOF
 
 # 6. Ensure correct ownership (critical)
