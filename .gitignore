@@ -47,6 +47,10 @@ build/
 *.ipr
 *.iws
 
+# Python
+__pycache__/
+*.pyc
+
 # OS specific files
 .DS_Store
 Thumbs.db
