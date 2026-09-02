@@ -1,16 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import easyocr
+from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+from PIL import Image
 import base64
 import cv2
 import numpy as np
+import re
 
 app = FastAPI()
 
-reader = easyocr.Reader(
-    ['en'],
-    gpu=False
-)
+processor = TrOCRProcessor.from_pretrained('microsoft/trocr-base-printed')
+model = VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-base-printed')
 
 class ImageRequest(BaseModel):
     base64Image: str
@@ -25,14 +25,17 @@ def read_captcha(req: ImageRequest):
     image = cv2.threshold(image, 0, 255,
                            cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-    result = reader.readtext(
-        image,
-        allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        detail=0
-    )
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    pil_image = Image.fromarray(image)
+
+    pixel_values = processor(images=pil_image, return_tensors="pt").pixel_values
+    generated_ids = model.generate(pixel_values)
+    text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+    text = re.sub(r'[^0-9A-Z]', '', text.upper())
 
     return {
-        "text": "".join(result)
+        "text": text
     }
 
 # ✅ Health check endpoint
